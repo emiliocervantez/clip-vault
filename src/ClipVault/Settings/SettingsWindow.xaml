@@ -3,11 +3,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ClipVault.Config"
         Title="ClipVault Settings"
-        Width="640" Height="560" MinWidth="520" MinHeight="460"
+        Width="640" Height="640" MinWidth="520" MinHeight="540"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True">
     <Grid Margin="12">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -25,14 +28,17 @@
 
         <CheckBox Grid.Row="1" x:Name="MoveToTopBox" Content="Move the chosen item to the top of the history" Margin="0,0,0,6"/>
         <CheckBox Grid.Row="2" x:Name="AutoInsertBox" Content="Insert the chosen item automatically (sends Ctrl+V)" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="3" x:Name="StartupBox" Content="Start with Windows" Margin="0,0,0,10"/>
+        <CheckBox Grid.Row="3" x:Name="StartupBox" Content="Start with Windows" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="4" x:Name="TextHintsBox" Content="Show hint for text items that do not fit the popup" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="5" x:Name="ImageHintsBox" Content="Show hint (full-size preview) for images" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="6" x:Name="NumbersBox" Content="Number the items in the popup" Margin="0,0,0,10"/>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Show history hotkey:" VerticalAlignment="Center"/>
             <local:HotkeyBox x:Name="PopupHotkeyBox" Width="200" Margin="8,0,0,0" VerticalContentAlignment="Center"/>
         </StackPanel>
 
-        <GroupBox Grid.Row="5" Header="Templates (predefined text)" Padding="6">
+        <GroupBox Grid.Row="8" Header="Templates (predefined text)" Padding="6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="180"/>
@@ -73,9 +79,9 @@
             </Grid>
         </GroupBox>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <StackPanel Grid.Row="9" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="OK" Width="80" IsDefault="True" Click="Ok_Click"/>
-            <Button Content="Cancel" Width="80" Margin="8,0,0,0" IsCancel="True"/>
+            <Button Content="Cancel" Width="80" Margin="8,0,0,0" IsCancel="True" Click="Cancel_Click"/>
         </StackPanel>
     </Grid>
 </Window>

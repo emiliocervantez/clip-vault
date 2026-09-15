@@ -18,17 +18,25 @@ Clipboard history for Windows 10 and 11. Runs in the tray, remembers what you co
 Requires the .NET 8 SDK.
 
 ```
-dotnet build ClipVault.sln
-dotnet test ClipVault.sln
+.\build.cmd            # Debug build + tests
+.\build.cmd -Release   # Release build + tests
+.\build.cmd -NoTest    # skip tests
 ```
 
 ## Publish (self-contained, single exe)
 
 ```
-dotnet publish src\ClipVault\ClipVault.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o publish
+.\publish.cmd                  # -> publish\ClipVault.exe
+.\publish.cmd -Output C:\tmp   # custom folder
+.\publish.cmd -StopRunning     # first stop a ClipVault started from the output folder
 ```
 
-The result is `publish\ClipVault.exe`. No .NET runtime needs to be installed on the target machine.
+The `.cmd` files run the matching `.ps1` with `-ExecutionPolicy Bypass`, so they work even when running
+PowerShell scripts is disabled on the machine. If your policy allows scripts, `.\build.ps1` and `.\publish.ps1`
+take the same arguments.
+
+The result is a single `ClipVault.exe` for win-x64. No .NET runtime needs to be installed on the target machine.
+The script refuses to overwrite an exe that is currently running unless `-StopRunning` is given.
 
 ## Layout
 

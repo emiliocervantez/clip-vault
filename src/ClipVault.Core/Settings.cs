@@ -26,6 +26,12 @@ public sealed class Settings
     public bool MoveChosenToTop { get; set; }
     public bool AutoInsert { get; set; }
     public bool StartWithWindows { get; set; }
+    /// <summary>Hover hint on text rows. Shown only when the row preview was truncated.</summary>
+    public bool ShowTextHints { get; set; } = true;
+    /// <summary>Hover hint (full-size preview) on image rows.</summary>
+    public bool ShowImageHints { get; set; } = true;
+    /// <summary>Prefix popup rows with their position ("01.", "02.", ...).</summary>
+    public bool ShowNumbers { get; set; } = true;
     public Hotkey PopupHotkey { get; set; } = DefaultPopupHotkey();
     public List<Template> Templates { get; set; } = new();
 
@@ -39,6 +45,9 @@ public sealed class Settings
         MoveChosenToTop = MoveChosenToTop,
         AutoInsert = AutoInsert,
         StartWithWindows = StartWithWindows,
+        ShowTextHints = ShowTextHints,
+        ShowImageHints = ShowImageHints,
+        ShowNumbers = ShowNumbers,
         PopupHotkey = new Hotkey(PopupHotkey.Modifiers, PopupHotkey.VirtualKey),
         Templates = Templates.Select(t => t.Clone()).ToList(),
     };

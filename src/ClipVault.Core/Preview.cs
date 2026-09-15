@@ -10,7 +10,12 @@ public static partial class Preview
     public const int TooltipLength = 500;
 
     /// <summary>Single line: whitespace runs collapsed, trimmed, truncated with an ellipsis.</summary>
-    public static string Row(string text) => Truncate(Whitespace().Replace(text, " ").Trim(), RowLength);
+    public static string Row(string text) => Truncate(Collapse(text), RowLength);
+
+    /// <summary>True when <see cref="Row"/> had to cut the text, so a hint adds information.</summary>
+    public static bool RowIsTruncated(string text) => new StringInfo(Collapse(text)).LengthInTextElements > RowLength;
+
+    private static string Collapse(string text) => Whitespace().Replace(text, " ").Trim();
 
     /// <summary>Original text, truncated with an ellipsis.</summary>
     public static string Tooltip(string text) => Truncate(text, TooltipLength);

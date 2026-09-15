@@ -14,7 +14,24 @@ public class SettingsTests
         Assert.False(s.MoveChosenToTop);
         Assert.False(s.AutoInsert);
         Assert.Equal("Ctrl+Shift+V", s.PopupHotkey.ToString());
+        Assert.True(s.ShowTextHints);
+        Assert.True(s.ShowImageHints);
+        Assert.True(s.ShowNumbers);
         Assert.Null(s.Validate());
+    }
+
+    [Fact]
+    public void Display_settings_survive_clone_and_json()
+    {
+        var s = new Settings { ShowTextHints = false, ShowImageHints = false, ShowNumbers = false };
+        var c = s.Clone();
+        Assert.False(c.ShowTextHints);
+        Assert.False(c.ShowImageHints);
+        Assert.False(c.ShowNumbers);
+        var back = JsonSerializer.Deserialize<Settings>(JsonSerializer.Serialize(s))!;
+        Assert.False(back.ShowTextHints);
+        Assert.False(back.ShowImageHints);
+        Assert.False(back.ShowNumbers);
     }
 
     [Fact]

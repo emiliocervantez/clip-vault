@@ -27,6 +27,9 @@ public partial class SettingsWindow : Window
         MoveToTopBox.IsChecked = _draft.MoveChosenToTop;
         AutoInsertBox.IsChecked = _draft.AutoInsert;
         StartupBox.IsChecked = _draft.StartWithWindows;
+        TextHintsBox.IsChecked = _draft.ShowTextHints;
+        ImageHintsBox.IsChecked = _draft.ShowImageHints;
+        NumbersBox.IsChecked = _draft.ShowNumbers;
         PopupHotkeyBox.Value = _draft.PopupHotkey;
         TemplateList.ItemsSource = _templates;
         TemplateHotkeyBox.ValueChanged += () => { if (_current is not null) _current.Hotkey = TemplateHotkeyBox.Value; };
@@ -70,6 +73,9 @@ public partial class SettingsWindow : Window
         _current.Text = TemplateTextBox.Text;
     }
 
+    // IsCancel only closes windows opened with ShowDialog; this one is opened with Show.
+    private void Cancel_Click(object sender, RoutedEventArgs e) => Close();
+
     private void Ok_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(MaxItemsBox.Text.Trim(), out var maxItems))
@@ -81,6 +87,9 @@ public partial class SettingsWindow : Window
         _draft.MoveChosenToTop = MoveToTopBox.IsChecked == true;
         _draft.AutoInsert = AutoInsertBox.IsChecked == true;
         _draft.StartWithWindows = StartupBox.IsChecked == true;
+        _draft.ShowTextHints = TextHintsBox.IsChecked == true;
+        _draft.ShowImageHints = ImageHintsBox.IsChecked == true;
+        _draft.ShowNumbers = NumbersBox.IsChecked == true;
         _draft.PopupHotkey = PopupHotkeyBox.Value ?? new Hotkey();
         _draft.Templates = _templates.ToList();
 

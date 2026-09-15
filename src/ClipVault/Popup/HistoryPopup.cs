@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -19,6 +20,7 @@ internal sealed class HistoryPopup
 {
     private const int ThumbnailHeight = 32;
     private const int TooltipImageMax = 400;
+    private const double RowFontSize = 13.5;   // default menu font is 12
 
     private readonly Vault _vault;
     private readonly Action<Clip> _onClipChosen;
@@ -110,23 +112,31 @@ internal sealed class HistoryPopup
 
     private MenuItem BuildClipItem(Clip clip, int number)
     {
-        var item = new MenuItem { Tag = clip };
+        var item = new MenuItem { Tag = clip, FontSize = RowFontSize };
         if (clip.Id == _vault.History.LastChosenId) item.FontWeight = FontWeights.Bold;
+        var prefix = _vault.Settings.ShowNumbers ? $"{number:00}. " : "";
 
         if (clip.Kind == ClipKind.Text)
         {
-            item.Header = new TextBlock { Text = $"{number}. {Preview.Row(clip.Text!)}" };
-            item.ToolTip = new TextBlock
+            var header = new TextBlock();
+            if (prefix.Length > 0) header.Inlines.Add(new Run(prefix) { FontWeight = FontWeights.Bold });
+            header.Inlines.Add(new Run(Preview.Row(clip.Text!)));
+            item.Header = header;
+            if (_vault.Settings.ShowTextHints && Preview.RowIsTruncated(clip.Text!))
             {
-                Text = Preview.Tooltip(clip.Text!),
-                MaxWidth = 600,
-                TextWrapping = TextWrapping.Wrap,
-            };
+                item.ToolTip = new TextBlock
+                {
+                    Text = Preview.Tooltip(clip.Text!),
+                    MaxWidth = 600,
+                    TextWrapping = TextWrapping.Wrap,
+                };
+            }
         }
         else
         {
             var panel = new StackPanel { Orientation = Orientation.Horizontal };
-            panel.Children.Add(new TextBlock { Text = $"{number}. ", VerticalAlignment = VerticalAlignment.Center });
+            if (prefix.Length > 0)
+                panel.Children.Add(new TextBlock { Text = prefix, FontWeight = FontWeights.Bold, VerticalAlignment = VerticalAlignment.Center });
             panel.Children.Add(new Image
             {
                 Source = Thumbnail(clip),
@@ -136,13 +146,16 @@ internal sealed class HistoryPopup
             });
             panel.Children.Add(new TextBlock { Text = "(BITMAP)", VerticalAlignment = VerticalAlignment.Center });
             item.Header = panel;
-            item.ToolTip = new Image
+            if (_vault.Settings.ShowImageHints)
             {
-                Source = ImageCodec.Load(_vault.Storage.ImagePath(clip)),
-                MaxWidth = TooltipImageMax,
-                MaxHeight = TooltipImageMax,
-                Stretch = Stretch.Uniform,
-            };
+                item.ToolTip = new Image
+                {
+                    Source = ImageCodec.Load(_vault.Storage.ImagePath(clip)),
+                    MaxWidth = TooltipImageMax,
+                    MaxHeight = TooltipImageMax,
+                    Stretch = Stretch.Uniform,
+                };
+            }
         }
         ToolTipService.SetInitialShowDelay(item, 700);
         item.Click += (_, _) => { _chosenClip = clip; _menu.IsOpen = false; };

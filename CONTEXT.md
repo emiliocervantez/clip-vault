@@ -10,6 +10,7 @@ ClipVault is a Windows clipboard-history tool. It watches the clipboard, keeps w
 | **History** | The ordered list of Clips, newest first, capped at the configured number of stored items. Kept across restarts. |
 | **Capture** | Adding what is currently on the system clipboard to the History. Content the source app marks as private, oversized content, and ClipVault's own clipboard writes are never captured. |
 | **Popup** | The menu listing the History, opened with the history hotkey. Rows are numbered; image rows show a thumbnail and "(BITMAP)". |
+| **Hint** | The hover tooltip on a Popup row. For a text Clip it shows more of the text and appears only when the row could not show all of it. For an image Clip it shows a larger preview. Each kind can be switched off in Settings. |
 | **Choose** | The user picking a Clip in the Popup. The Clip goes onto the system clipboard and becomes the Last Chosen Clip. |
 | **Last Chosen Clip** | The Clip most recently chosen. Shown in bold in the Popup and preselected when the Popup opens. At most one exists. |
 | **Insert** | Pasting the clipboard into the Previous Window by sending Ctrl+V. Happens after Choose only when the auto-insert setting is on; always happens for a Template. |

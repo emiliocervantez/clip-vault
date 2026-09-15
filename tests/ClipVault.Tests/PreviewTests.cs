@@ -36,6 +36,16 @@ public class PreviewTests
     }
 
     [Fact]
+    public void RowIsTruncated_only_when_collapsed_text_exceeds_row()
+    {
+        Assert.False(Preview.RowIsTruncated(new string('x', Preview.RowLength)));
+        Assert.True(Preview.RowIsTruncated(new string('x', Preview.RowLength + 1)));
+        // Whitespace is collapsed before measuring, so padding does not count.
+        Assert.False(Preview.RowIsTruncated("short   text\n\n" + new string(' ', 100)));
+        Assert.False(Preview.RowIsTruncated(string.Concat(Enumerable.Repeat("😀", Preview.RowLength))));
+    }
+
+    [Fact]
     public void Tooltip_keeps_newlines()
     {
         Assert.Equal("a\nb", Preview.Tooltip("a\nb"));
