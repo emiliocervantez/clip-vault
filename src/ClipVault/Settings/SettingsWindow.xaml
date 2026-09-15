@@ -1,0 +1,81 @@
+<Window x:Class="ClipVault.Config.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ClipVault.Config"
+        Title="ClipVault Settings"
+        Width="640" Height="560" MinWidth="520" MinHeight="460"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="Number of stored items:" VerticalAlignment="Center"/>
+            <TextBox x:Name="MaxItemsBox" Width="60" Margin="8,0,4,0" VerticalContentAlignment="Center"/>
+            <TextBlock x:Name="MaxItemsRange" VerticalAlignment="Center" Foreground="Gray"/>
+        </StackPanel>
+
+        <CheckBox Grid.Row="1" x:Name="MoveToTopBox" Content="Move the chosen item to the top of the history" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="2" x:Name="AutoInsertBox" Content="Insert the chosen item automatically (sends Ctrl+V)" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="3" x:Name="StartupBox" Content="Start with Windows" Margin="0,0,0,10"/>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Show history hotkey:" VerticalAlignment="Center"/>
+            <local:HotkeyBox x:Name="PopupHotkeyBox" Width="200" Margin="8,0,0,0" VerticalContentAlignment="Center"/>
+        </StackPanel>
+
+        <GroupBox Grid.Row="5" Header="Templates (predefined text)" Padding="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0" Margin="0,0,8,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ListBox x:Name="TemplateList" Grid.Row="0" DisplayMemberPath="Name" SelectionChanged="TemplateList_SelectionChanged"/>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button Content="Add" Width="60" Click="AddTemplate_Click"/>
+                        <Button Content="Remove" Width="60" Margin="6,0,0,0" Click="RemoveTemplate_Click"/>
+                    </StackPanel>
+                </Grid>
+                <Grid Grid.Column="1" x:Name="TemplateEditor" IsEnabled="False">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Name:" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="TemplateNameBox" Margin="0,0,0,6" TextChanged="TemplateName_TextChanged"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Hotkey:" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                    <local:HotkeyBox Grid.Row="1" Grid.Column="1" x:Name="TemplateHotkeyBox" Margin="0,0,0,6"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Text:" Margin="0,0,0,4"/>
+                    <TextBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TemplateTextBox"
+                             AcceptsReturn="True" AcceptsTab="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto" FontFamily="Consolas"
+                             TextChanged="TemplateText_TextChanged"/>
+                </Grid>
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="OK" Width="80" IsDefault="True" Click="Ok_Click"/>
+            <Button Content="Cancel" Width="80" Margin="8,0,0,0" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
