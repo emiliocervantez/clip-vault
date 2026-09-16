@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using ClipVault.Core;
@@ -24,6 +25,8 @@ public partial class SettingsWindow : Window
 
         MaxItemsBox.Text = _draft.MaxItems.ToString();
         MaxItemsRange.Text = $"({CoreSettings.MinItems}-{CoreSettings.MaxItemsLimit})";
+        FontSizeBox.Text = _draft.FontSize.ToString(CultureInfo.InvariantCulture);
+        FontSizeRange.Text = $"({CoreSettings.MinFontSize}-{CoreSettings.MaxFontSize})";
         MoveToTopBox.IsChecked = _draft.MoveChosenToTop;
         StartupBox.IsChecked = _draft.StartWithWindows;
         TextHintsBox.IsChecked = _draft.ShowTextHints;
@@ -82,7 +85,13 @@ public partial class SettingsWindow : Window
             MessageBox.Show(this, "Number of stored items must be a whole number.", "ClipVault", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
+        if (!double.TryParse(FontSizeBox.Text.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var fontSize))
+        {
+            MessageBox.Show(this, "Popup font size must be a number.", "ClipVault", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
         _draft.MaxItems = maxItems;
+        _draft.FontSize = fontSize;
         _draft.MoveChosenToTop = MoveToTopBox.IsChecked == true;
         _draft.StartWithWindows = StartupBox.IsChecked == true;
         _draft.ShowTextHints = TextHintsBox.IsChecked == true;

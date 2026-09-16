@@ -24,6 +24,9 @@
             <TextBlock Text="Number of stored items:" VerticalAlignment="Center"/>
             <TextBox x:Name="MaxItemsBox" Width="60" Margin="8,0,4,0" VerticalContentAlignment="Center"/>
             <TextBlock x:Name="MaxItemsRange" VerticalAlignment="Center" Foreground="Gray"/>
+            <TextBlock Text="Popup font size:" VerticalAlignment="Center" Margin="24,0,0,0"/>
+            <TextBox x:Name="FontSizeBox" Width="50" Margin="8,0,4,0" VerticalContentAlignment="Center"/>
+            <TextBlock x:Name="FontSizeRange" VerticalAlignment="Center" Foreground="Gray"/>
         </StackPanel>
 
         <CheckBox Grid.Row="1" x:Name="MoveToTopBox" Content="Move the chosen item to the top of the history" Margin="0,0,0,6"/>

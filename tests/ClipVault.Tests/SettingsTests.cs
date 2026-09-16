@@ -16,7 +16,19 @@ public class SettingsTests
         Assert.True(s.ShowTextHints);
         Assert.True(s.ShowImageHints);
         Assert.True(s.ShowNumbers);
+        Assert.Equal(13.5, s.FontSize);
         Assert.Null(s.Validate());
+    }
+
+    [Fact]
+    public void FontSize_is_validated_cloned_and_serialized()
+    {
+        Assert.Contains("Font size", new Settings { FontSize = 7 }.Validate());
+        Assert.Contains("Font size", new Settings { FontSize = 33 }.Validate());
+        var s = new Settings { FontSize = 16 };
+        Assert.Null(s.Validate());
+        Assert.Equal(16, s.Clone().FontSize);
+        Assert.Equal(16, JsonSerializer.Deserialize<Settings>(JsonSerializer.Serialize(s))!.FontSize);
     }
 
     [Fact]

@@ -19,7 +19,6 @@ internal sealed class HistoryPopup
 {
     private const int ThumbnailHeight = 32;
     private const int TooltipImageMax = 400;
-    private const double RowFontSize = 13.5;   // default menu font is 12
     private const int PageStep = 8;
 
     private enum Action { TemplateHeader, Back, Cancel }
@@ -116,7 +115,7 @@ internal sealed class HistoryPopup
             {
                 Content = content,
                 Tag = t,
-                FontSize = RowFontSize,
+                FontSize = _vault.Settings.FontSize,
                 ToolTip = TextTooltip(t.Text),
             });
         }
@@ -188,7 +187,7 @@ internal sealed class HistoryPopup
             Content = content,
             Tag = clip,
             ToolTip = tooltip,
-            FontSize = RowFontSize,
+            FontSize = _vault.Settings.FontSize,
             FontWeight = clip.Id == _vault.History.LastChosenId ? FontWeights.Bold : FontWeights.Normal,
         };
     }

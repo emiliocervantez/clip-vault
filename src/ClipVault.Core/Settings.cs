@@ -20,6 +20,9 @@ public sealed class Settings
     public const int MinItems = 1;
     public const int MaxItemsLimit = 500;
     public const int DefaultMaxItems = 50;
+    public const double MinFontSize = 8;
+    public const double MaxFontSize = 32;
+    public const double DefaultFontSize = 13.5;   // the default menu font is 12
     private const int VkV = 0x56;
 
     public int MaxItems { get; set; } = DefaultMaxItems;
@@ -31,6 +34,8 @@ public sealed class Settings
     public bool ShowImageHints { get; set; } = true;
     /// <summary>Prefix popup rows with their position ("01.", "02.", ...).</summary>
     public bool ShowNumbers { get; set; } = true;
+    /// <summary>Font size of the popup rows, in WPF device-independent pixels.</summary>
+    public double FontSize { get; set; } = DefaultFontSize;
     public Hotkey PopupHotkey { get; set; } = DefaultPopupHotkey();
     public List<Template> Templates { get; set; } = new();
 
@@ -46,6 +51,7 @@ public sealed class Settings
         ShowTextHints = ShowTextHints,
         ShowImageHints = ShowImageHints,
         ShowNumbers = ShowNumbers,
+        FontSize = FontSize,
         PopupHotkey = new Hotkey(PopupHotkey.Modifiers, PopupHotkey.VirtualKey),
         Templates = Templates.Select(t => t.Clone()).ToList(),
     };
@@ -55,6 +61,8 @@ public sealed class Settings
     {
         if (MaxItems is < MinItems or > MaxItemsLimit)
             return $"Number of stored items must be between {MinItems} and {MaxItemsLimit}.";
+        if (double.IsNaN(FontSize) || FontSize is < MinFontSize or > MaxFontSize)
+            return $"Font size must be between {MinFontSize} and {MaxFontSize}.";
         if (PopupHotkey.IsEmpty)
             return "The history hotkey must be set.";
 
