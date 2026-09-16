@@ -12,7 +12,6 @@ public class SettingsTests
         var s = new Settings();
         Assert.Equal(50, s.MaxItems);
         Assert.False(s.MoveChosenToTop);
-        Assert.False(s.AutoInsert);
         Assert.Equal("Ctrl+Shift+V", s.PopupHotkey.ToString());
         Assert.True(s.ShowTextHints);
         Assert.True(s.ShowImageHints);
@@ -73,12 +72,12 @@ public class SettingsTests
     [Fact]
     public void Json_round_trip()
     {
-        var s = new Settings { MaxItems = 7, AutoInsert = true };
+        var s = new Settings { MaxItems = 7, MoveChosenToTop = true };
         s.Templates.Add(new Template { Name = "t", Text = "line1\nline2", Hotkey = new Hotkey(HotkeyModifiers.Win | HotkeyModifiers.Shift, 0x41) });
         var json = JsonSerializer.Serialize(s);
         var back = JsonSerializer.Deserialize<Settings>(json)!;
         Assert.Equal(7, back.MaxItems);
-        Assert.True(back.AutoInsert);
+        Assert.True(back.MoveChosenToTop);
         Assert.Equal(s.PopupHotkey, back.PopupHotkey);
         Assert.Equal("Shift+Win+A", back.Templates[0].Hotkey!.ToString());
         Assert.Equal("line1\nline2", back.Templates[0].Text);

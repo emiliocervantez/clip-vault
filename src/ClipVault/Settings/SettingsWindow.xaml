@@ -27,11 +27,12 @@
         </StackPanel>
 
         <CheckBox Grid.Row="1" x:Name="MoveToTopBox" Content="Move the chosen item to the top of the history" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="2" x:Name="AutoInsertBox" Content="Insert the chosen item automatically (sends Ctrl+V)" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="3" x:Name="StartupBox" Content="Start with Windows" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="4" x:Name="TextHintsBox" Content="Show hint for text items that do not fit the popup" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="5" x:Name="ImageHintsBox" Content="Show hint (full-size preview) for images" Margin="0,0,0,6"/>
-        <CheckBox Grid.Row="6" x:Name="NumbersBox" Content="Number the items in the popup" Margin="0,0,0,10"/>
+        <CheckBox Grid.Row="2" x:Name="StartupBox" Content="Start with Windows" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="3" x:Name="TextHintsBox" Content="Show hint for text items that do not fit the popup" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="4" x:Name="ImageHintsBox" Content="Show hint (full-size preview) for images" Margin="0,0,0,6"/>
+        <CheckBox Grid.Row="5" x:Name="NumbersBox" Content="Number the items in the popup" Margin="0,0,0,6"/>
+        <TextBlock Grid.Row="6" Foreground="Gray" Margin="0,0,0,10" TextWrapping="Wrap"
+                   Text="A chosen item is pasted into the previous window. Hold Shift while choosing to only copy it to the clipboard."/>
 
         <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,0,0,10">
             <TextBlock Text="Show history hotkey:" VerticalAlignment="Center"/>

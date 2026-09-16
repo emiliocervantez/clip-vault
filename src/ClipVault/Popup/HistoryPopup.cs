@@ -25,7 +25,8 @@ internal sealed class HistoryPopup
     private const int MouseArmPollMs = 30;
 
     private readonly Vault _vault;
-    private readonly Action<Clip> _onClipChosen;
+    /// <summary>Clip plus whether to paste it (false when Shift was held while choosing).</summary>
+    private readonly Action<Clip, bool> _onClipChosen;
     private readonly Action<Template> _onTemplateChosen;
     private readonly Window _anchor;
     private readonly ContextMenu _menu;
@@ -36,9 +37,10 @@ internal sealed class HistoryPopup
     private IntPtr _previousWindow;
     private MenuItem? _cancelItem;
     private Clip? _chosenClip;
+    private bool _insertChosen;
     private Template? _chosenTemplate;
 
-    public HistoryPopup(Vault vault, Action<Clip> onClipChosen, Action<Template> onTemplateChosen)
+    public HistoryPopup(Vault vault, Action<Clip, bool> onClipChosen, Action<Template> onTemplateChosen)
     {
         _vault = vault;
         _onClipChosen = onClipChosen;
@@ -212,8 +214,16 @@ internal sealed class HistoryPopup
             }
         }
         ToolTipService.SetInitialShowDelay(item, 700);
-        item.Click += (_, _) => { _chosenClip = clip; _menu.IsOpen = false; };
+        item.Click += (_, _) => ChooseClip(clip);
         return item;
+    }
+
+    /// <summary>Shift held while choosing means "copy only, do not paste".</summary>
+    private void ChooseClip(Clip clip)
+    {
+        _chosenClip = clip;
+        _insertChosen = !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        _menu.IsOpen = false;
     }
 
     private BitmapSource Thumbnail(Clip clip)
@@ -262,14 +272,10 @@ internal sealed class HistoryPopup
             >= Key.NumPad1 and <= Key.NumPad9 => e.Key - Key.NumPad0,
             _ => 0,
         };
-        if (digit > 0 && Keyboard.Modifiers == ModifierKeys.None)
+        if (digit > 0 && (Keyboard.Modifiers & ~ModifierKeys.Shift) == ModifierKeys.None)
         {
             var item = ClipItems().ElementAtOrDefault(digit - 1);
-            if (item is not null)
-            {
-                _chosenClip = (Clip)item.Tag;
-                _menu.IsOpen = false;
-            }
+            if (item is not null) ChooseClip((Clip)item.Tag);
             e.Handled = true;
             return;
         }
@@ -323,10 +329,11 @@ internal sealed class HistoryPopup
         }
 
         var clip = _chosenClip;
+        var insert = _insertChosen;
         var template = _chosenTemplate;
         _chosenClip = null;
         _chosenTemplate = null;
-        if (clip is not null) _onClipChosen(clip);
+        if (clip is not null) _onClipChosen(clip, insert);
         else if (template is not null) _onTemplateChosen(template);
     }
 }

@@ -25,7 +25,6 @@ public partial class SettingsWindow : Window
         MaxItemsBox.Text = _draft.MaxItems.ToString();
         MaxItemsRange.Text = $"({CoreSettings.MinItems}-{CoreSettings.MaxItemsLimit})";
         MoveToTopBox.IsChecked = _draft.MoveChosenToTop;
-        AutoInsertBox.IsChecked = _draft.AutoInsert;
         StartupBox.IsChecked = _draft.StartWithWindows;
         TextHintsBox.IsChecked = _draft.ShowTextHints;
         ImageHintsBox.IsChecked = _draft.ShowImageHints;
@@ -85,7 +84,6 @@ public partial class SettingsWindow : Window
         }
         _draft.MaxItems = maxItems;
         _draft.MoveChosenToTop = MoveToTopBox.IsChecked == true;
-        _draft.AutoInsert = AutoInsertBox.IsChecked == true;
         _draft.StartWithWindows = StartupBox.IsChecked == true;
         _draft.ShowTextHints = TextHintsBox.IsChecked == true;
         _draft.ShowImageHints = ImageHintsBox.IsChecked == true;

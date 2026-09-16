@@ -122,12 +122,12 @@ public partial class App : Application
         return failures;
     }
 
-    private async void OnClipChosen(Clip clip)
+    private async void OnClipChosen(Clip clip, bool insert)
     {
         _vault!.Choose(clip);
-        if (!_vault.Settings.AutoInsert) return;
+        if (!insert) return;
         await Task.Delay(AutoInsertDelayMs);
-        Trace.Log($"auto-insert: sending Ctrl+V to {Trace.Foreground()}");
+        Trace.Log($"insert: sending Ctrl+V to {Trace.Foreground()}");
         InputSender.SendCtrlV();
     }
 

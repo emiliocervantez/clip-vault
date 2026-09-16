@@ -24,7 +24,6 @@ public sealed class Settings
 
     public int MaxItems { get; set; } = DefaultMaxItems;
     public bool MoveChosenToTop { get; set; }
-    public bool AutoInsert { get; set; }
     public bool StartWithWindows { get; set; }
     /// <summary>Hover hint on text rows. Shown only when the row preview was truncated.</summary>
     public bool ShowTextHints { get; set; } = true;
@@ -43,7 +42,6 @@ public sealed class Settings
     {
         MaxItems = MaxItems,
         MoveChosenToTop = MoveChosenToTop,
-        AutoInsert = AutoInsert,
         StartWithWindows = StartWithWindows,
         ShowTextHints = ShowTextHints,
         ShowImageHints = ShowImageHints,
