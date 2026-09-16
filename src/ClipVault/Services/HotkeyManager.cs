@@ -18,6 +18,7 @@ internal sealed class HotkeyManager : IDisposable
 
     private void OnHotkey(int id)
     {
+        Trace.Log($"hotkey {id} pressed, foreground {Trace.Foreground()}");
         if (_actions.TryGetValue(id, out var action)) action();
     }
 

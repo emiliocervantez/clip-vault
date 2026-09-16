@@ -17,7 +17,9 @@ Windows delivers keyboard input to the foreground thread. Two ways exist to comb
 
 ## Decision
 
-Option 2. A 1x1 transparent anchor window is placed at the caret, brought to the foreground (with the `AttachThreadInput` and synthetic Alt-press workarounds for the foreground lock), and the menu is opened relative to it. `ContextMenu.Closed` restores the previous window before any Ctrl+V is sent.
+Option 2. A 1x1 transparent anchor window is placed at the caret, brought to the foreground, and the menu is opened relative to it. `ContextMenu.Closed` restores the previous window before any Ctrl+V is sent.
+
+Foreground changes use plain `SetForegroundWindow` only. The global hotkey grants foreground rights on open, and on close ClipVault itself is the foreground process, so no workaround for the foreground lock is needed. The two common workarounds were tried and rejected: `AttachThreadInput` stalls Electron apps (Slack) for several seconds after the popup closes, and a synthetic Alt tap puts them into menu-bar mode, which swallows the next shortcut.
 
 ## Consequences
 

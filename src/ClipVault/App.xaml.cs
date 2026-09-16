@@ -37,8 +37,13 @@ public partial class App : Application
         }
         ThreadPool.RegisterWaitForSingleObject(showSettings, (_, _) => Dispatcher.BeginInvoke(ShowSettings), null, -1, false);
 
-        _vault = new Vault(new VaultStorage(VaultStorage.DefaultRoot()));
+        var storage = new VaultStorage(VaultStorage.DefaultRoot());
+        if (e.Args.Contains("--trace", StringComparer.OrdinalIgnoreCase))
+            Trace.Enable(System.IO.Path.Combine(storage.RootDir, "trace.log"), Dispatcher);
+
+        _vault = new Vault(storage);
         _messages = new MessageWindow();
+        ClipboardIO.Owner = _messages.Handle;
         _messages.ClipboardUpdated += _vault.CaptureFromClipboard;
         _hotkeys = new HotkeyManager(_messages);
         _popup = new HistoryPopup(_vault, OnClipChosen, OnTemplateChosen);
@@ -122,6 +127,7 @@ public partial class App : Application
         _vault!.Choose(clip);
         if (!_vault.Settings.AutoInsert) return;
         await Task.Delay(AutoInsertDelayMs);
+        Trace.Log($"auto-insert: sending Ctrl+V to {Trace.Foreground()}");
         InputSender.SendCtrlV();
     }
 

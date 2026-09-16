@@ -8,25 +8,18 @@ internal static class WindowFocus
 {
     public static IntPtr Current() => GetForegroundWindow();
 
-    /// <summary>Makes <paramref name="hwnd"/> the foreground window, working around the foreground lock when needed.</summary>
+    /// <summary>
+    /// Makes <paramref name="hwnd"/> the foreground window. Plain SetForegroundWindow only: on open the
+    /// hotkey grants foreground rights, on close this process already is the foreground process.
+    /// Cross-process activation is asynchronous, so the result is not verified here.
+    /// No AttachThreadInput and no synthetic key press: both stall Electron apps (Slack, VS Code)
+    /// for several seconds or put them into menu-bar mode.
+    /// </summary>
     public static void Bring(IntPtr hwnd)
     {
         if (hwnd == IntPtr.Zero || !IsWindow(hwnd)) return;
         if (GetForegroundWindow() == hwnd) return;
-
         SetForegroundWindow(hwnd);
-        if (GetForegroundWindow() == hwnd) return;
-
-        // Windows only grants foreground rights to the thread that received the last input.
-        // A synthetic Alt press plus attaching to the current foreground thread unlocks it.
-        keybd_event((byte)VK_MENU, 0, 0, UIntPtr.Zero);
-        keybd_event((byte)VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-
-        var foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), out _);
-        var ourThread = GetCurrentThreadId();
-        var attached = foregroundThread != 0 && foregroundThread != ourThread && AttachThreadInput(ourThread, foregroundThread, true);
-        SetForegroundWindow(hwnd);
-        if (attached) AttachThreadInput(ourThread, foregroundThread, false);
     }
 
     /// <summary>Screen position (pixels) of the text caret in <paramref name="hwnd"/>, or the mouse cursor when no caret is exposed.</summary>

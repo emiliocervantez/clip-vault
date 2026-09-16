@@ -12,7 +12,7 @@ ClipVault is a Windows clipboard-history tool. It watches the clipboard, keeps w
 | **Popup** | The menu listing the History, opened with the history hotkey. Rows are numbered; image rows show a thumbnail and "(BITMAP)". |
 | **Hint** | The hover tooltip on a Popup row. For a text Clip it shows more of the text and appears only when the row could not show all of it. For an image Clip it shows a larger preview. Each kind can be switched off in Settings. |
 | **Choose** | The user picking a Clip in the Popup. The Clip goes onto the system clipboard and becomes the Last Chosen Clip. |
-| **Last Chosen Clip** | The Clip most recently chosen. Shown in bold in the Popup and preselected when the Popup opens. At most one exists. |
+| **Last Chosen Clip** | The Clip most recently chosen. Shown in bold in the Popup. At most one exists. The Popup always opens with the first (newest) row selected. |
 | **Insert** | Pasting the clipboard into the Previous Window by sending Ctrl+V. Happens after Choose only when the auto-insert setting is on; always happens for a Template. |
 | **Previous Window** | The application window that had focus when the Popup was opened. It regains focus when the Popup closes, whatever closed it. |
 | **Template** | A named, predefined piece of text with an optional hotkey. Pressing the hotkey or picking it from the Popup's Template submenu Inserts it and then restores what was on the clipboard before. Templates are never captured into the History. |

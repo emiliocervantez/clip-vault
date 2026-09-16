@@ -30,6 +30,7 @@ internal sealed class HistoryPopup
     private readonly Dictionary<Guid, BitmapSource> _thumbnails = new();
 
     private IntPtr _previousWindow;
+    private MenuItem? _cancelItem;
     private Clip? _chosenClip;
     private Template? _chosenTemplate;
 
@@ -75,6 +76,7 @@ internal sealed class HistoryPopup
         _previousWindow = WindowFocus.Current();
         _chosenClip = null;
         _chosenTemplate = null;
+        Trace.Log($"popup open: previous {Trace.Window(_previousWindow)}");
 
         var pt = WindowFocus.CaretOrCursor(_previousWindow);
         _anchor.Show();
@@ -82,11 +84,13 @@ internal sealed class HistoryPopup
         NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, pt.X, pt.Y, 0, 0,
             NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
         WindowFocus.Bring(hwnd);
+        Trace.Log($"popup open: anchor shown at {pt.X},{pt.Y}; foreground now {Trace.Foreground()}");
 
         Populate();
         _menu.PlacementTarget = (UIElement)_anchor.Content;
         _menu.IsOpen = true;
         FocusInitialItem();
+        Trace.Log($"popup open: menu open, foreground {Trace.Foreground()}");
     }
 
     private void Populate()
@@ -95,7 +99,7 @@ internal sealed class HistoryPopup
         var clips = _vault.History.Items;
         if (clips.Count == 0)
         {
-            _menu.Items.Add(new MenuItem { Header = "(no clips yet)", IsEnabled = false });
+            _menu.Items.Add(EmptyItem());
         }
         for (var i = 0; i < clips.Count; i++)
         {
@@ -105,16 +109,36 @@ internal sealed class HistoryPopup
         _menu.Items.Add(new Separator());
         _menu.Items.Add(BuildTemplateItem());
         _menu.Items.Add(new Separator());
-        var cancel = new MenuItem { Header = "Cancel" };
-        cancel.Click += (_, _) => _menu.IsOpen = false;
-        _menu.Items.Add(cancel);
+        _cancelItem = new MenuItem { Header = "Cancel" };
+        _cancelItem.Click += (_, _) => _menu.IsOpen = false;
+        _menu.Items.Add(_cancelItem);
+    }
+
+    private static MenuItem EmptyItem() => new() { Header = "(no clips yet)", IsEnabled = false };
+
+    private string NumberPrefix(int number) => _vault.Settings.ShowNumbers ? $"{number:00}. " : "";
+
+    /// <summary>Rewrites the bold number prefix of an existing row.</summary>
+    private void SetNumber(MenuItem item, int number)
+    {
+        var prefix = NumberPrefix(number);
+        if (prefix.Length == 0) return;
+        switch (item.Header)
+        {
+            case TextBlock tb when tb.Inlines.FirstInline is Run run:
+                run.Text = prefix;
+                break;
+            case StackPanel sp when sp.Children[0] is TextBlock tb:
+                tb.Text = prefix;
+                break;
+        }
     }
 
     private MenuItem BuildClipItem(Clip clip, int number)
     {
         var item = new MenuItem { Tag = clip, FontSize = RowFontSize };
         if (clip.Id == _vault.History.LastChosenId) item.FontWeight = FontWeights.Bold;
-        var prefix = _vault.Settings.ShowNumbers ? $"{number:00}. " : "";
+        var prefix = NumberPrefix(number);
 
         if (clip.Kind == ClipKind.Text)
         {
@@ -193,8 +217,7 @@ internal sealed class HistoryPopup
 
     private void FocusInitialItem()
     {
-        var target = ClipItems().FirstOrDefault(m => ((Clip)m.Tag).Id == _vault.History.LastChosenId)
-                     ?? ClipItems().FirstOrDefault();
+        var target = ClipItems().FirstOrDefault();
         if (target is null) return;
         _menu.Dispatcher.BeginInvoke(() => target.Focus(), System.Windows.Threading.DispatcherPriority.Input);
     }
@@ -223,24 +246,50 @@ internal sealed class HistoryPopup
 
         if (e.Key == Key.Delete)
         {
-            var items = ClipItems().ToList();
-            var index = items.FindIndex(m => m.IsHighlighted || m.IsKeyboardFocusWithin);
-            if (index >= 0)
-            {
-                _vault.History.Remove(((Clip)items[index].Tag).Id);
-                Populate();
-                var next = ClipItems().ElementAtOrDefault(Math.Min(index, _vault.History.Items.Count - 1));
-                if (next is not null)
-                    _menu.Dispatcher.BeginInvoke(() => next.Focus(), System.Windows.Threading.DispatcherPriority.Input);
-            }
+            DeleteHighlightedRow();
             e.Handled = true;
         }
     }
 
+    /// <summary>
+    /// Removes the highlighted clip without rebuilding the menu: rebuilding would drop the focused row,
+    /// the menu would lose keyboard focus, and WPF would close it.
+    /// </summary>
+    private void DeleteHighlightedRow()
+    {
+        var items = ClipItems().ToList();
+        var index = items.FindIndex(m => m.IsHighlighted || m.IsKeyboardFocusWithin);
+        if (index < 0) return;
+
+        var victim = items[index];
+        var next = items.ElementAtOrDefault(index + 1) ?? items.ElementAtOrDefault(index - 1);
+        (next ?? _cancelItem)?.Focus();   // keep focus inside the menu before the row disappears
+
+        _menu.Items.Remove(victim);
+        _vault.History.Remove(((Clip)victim.Tag).Id);
+
+        var remaining = ClipItems().ToList();
+        if (remaining.Count == 0)
+        {
+            _menu.Items.Insert(0, EmptyItem());
+            return;
+        }
+        for (var i = 0; i < remaining.Count; i++) SetNumber(remaining[i], i + 1);
+    }
+
     private void OnMenuClosed(object sender, RoutedEventArgs e)
     {
+        Trace.Log($"popup closed: chosen={(_chosenClip is not null ? _chosenClip.Kind.ToString() : _chosenTemplate is not null ? "template" : "nothing")}, foreground {Trace.Foreground()}");
         _anchor.Hide();
+        Trace.Log($"popup closed: anchor hidden, foreground {Trace.Foreground()}");
         WindowFocus.Bring(_previousWindow);
+        Trace.Log($"popup closed: after restore, foreground {Trace.Foreground()}");
+        if (Trace.Enabled)
+        {
+            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
+            later.Tick += (_, _) => { later.Stop(); Trace.Log($"popup closed +250ms: foreground {Trace.Foreground()}"); };
+            later.Start();
+        }
 
         var clip = _chosenClip;
         var template = _chosenTemplate;

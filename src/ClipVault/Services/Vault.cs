@@ -27,9 +27,13 @@ internal sealed class Vault
     /// <summary>Called on every clipboard change. Ignores our own writes, private content and oversized data.</summary>
     public void CaptureFromClipboard()
     {
-        if (NativeMethods.GetClipboardSequenceNumber() == _ownSequence) return;
+        var sequence = NativeMethods.GetClipboardSequenceNumber();
+        Trace.Log($"clipboard update: seq {sequence}, own {_ownSequence}{(sequence == _ownSequence ? " (skipped)" : "")}");
+        if (sequence == _ownSequence) return;
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var snapshot = ClipboardIO.Read();
+        Trace.Log($"clipboard read: {sw.ElapsedMilliseconds} ms, {(snapshot is null ? "private" : snapshot.Text is not null ? "text" : snapshot.Image is not null ? "image" : "unsupported")}");
         if (snapshot is null) return;
 
         if (snapshot.Text is { } text)
@@ -52,15 +56,20 @@ internal sealed class Vault
     /// <summary>Marks the clip as chosen and puts it on the clipboard without re-capturing it.</summary>
     public void Choose(Clip clip)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         History.Choose(clip.Id, Settings.MoveChosenToTop);
+        Trace.Log($"choose: history updated in {sw.ElapsedMilliseconds} ms");
         if (clip.Kind == ClipKind.Text) SetOwnText(clip.Text!);
         else SetOwnImage(ImageCodec.Load(Storage.ImagePath(clip)));
+        Trace.Log($"choose: clipboard written, total {sw.ElapsedMilliseconds} ms");
     }
 
     public void SetOwnText(string text)
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         ClipboardIO.SetText(text);
         MarkOwnWrite();
+        Trace.Log($"clipboard write: {text.Length} chars in {sw.ElapsedMilliseconds} ms, seq now {_ownSequence}");
     }
 
     public void SetOwnImage(BitmapSource image)
