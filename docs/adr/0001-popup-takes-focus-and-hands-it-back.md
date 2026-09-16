@@ -4,7 +4,7 @@ Date: 2026-09-15
 
 ## Status
 
-Accepted
+Superseded by [ADR 3](0003-popup-never-takes-focus.md). Taking focus, even briefly, closes transient popups in the previously focused application (Cursor / VS Code quick-open).
 
 ## Context
 

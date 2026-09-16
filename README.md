@@ -9,7 +9,7 @@ Clipboard history for Windows 10 and 11. Runs in the tray, remembers what you co
 - Keyboard: arrows, `Enter`, digits `1`-`9`, `Del` removes a clip, `Esc` closes.
 - A chosen clip is pasted into the previous window. Hold `Shift` while choosing to only copy it to the clipboard.
 - The last chosen clip is shown in bold; the popup opens with the newest clip selected.
-- The window that had focus before the popup opened gets it back when the popup closes.
+- The popup never takes focus, so the app you are working in keeps focus and any popup it has open stays open.
 - Templates: predefined text with optional hotkeys, also reachable from the popup's Template submenu.
 - Settings: number of stored items, move chosen item to top, start with Windows, hints, numbering, hotkeys, templates.
 - Content that password managers mark as private is never stored.

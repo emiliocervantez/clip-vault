@@ -3,24 +3,10 @@ using static ClipVault.Native.NativeMethods;
 
 namespace ClipVault.Services;
 
-/// <summary>Foreground-window bookkeeping and caret lookup.</summary>
+/// <summary>Foreground-window bookkeeping and caret lookup. Never changes focus: the popup does not activate.</summary>
 internal static class WindowFocus
 {
     public static IntPtr Current() => GetForegroundWindow();
-
-    /// <summary>
-    /// Makes <paramref name="hwnd"/> the foreground window. Plain SetForegroundWindow only: on open the
-    /// hotkey grants foreground rights, on close this process already is the foreground process.
-    /// Cross-process activation is asynchronous, so the result is not verified here.
-    /// No AttachThreadInput and no synthetic key press: both stall Electron apps (Slack, VS Code)
-    /// for several seconds or put them into menu-bar mode.
-    /// </summary>
-    public static void Bring(IntPtr hwnd)
-    {
-        if (hwnd == IntPtr.Zero || !IsWindow(hwnd)) return;
-        if (GetForegroundWindow() == hwnd) return;
-        SetForegroundWindow(hwnd);
-    }
 
     /// <summary>Screen position (pixels) of the text caret in <paramref name="hwnd"/>, or the mouse cursor when no caret is exposed.</summary>
     public static POINT CaretOrCursor(IntPtr hwnd)

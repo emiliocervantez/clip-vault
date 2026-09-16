@@ -1,192 +1,161 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using ClipVault.Core;
 using ClipVault.Native;
 using ClipVault.Services;
+using static ClipVault.Native.NativeMethods;
 
 namespace ClipVault.Popup;
 
 /// <summary>
-/// The clipboard-history menu. A 1x1 transparent anchor window is placed at the caret and brought to the
-/// foreground so the menu can take keyboard input; on close the previously focused window gets focus back.
+/// The clipboard-history menu. The window never takes focus; while it is open a low-level keyboard hook
+/// feeds it navigation keys and swallows them, so the previously focused application keeps focus and
+/// keeps any transient popup it has open.
 /// </summary>
 internal sealed class HistoryPopup
 {
     private const int ThumbnailHeight = 32;
     private const int TooltipImageMax = 400;
     private const double RowFontSize = 13.5;   // default menu font is 12
-    private const int MouseArmDistancePx = 3;
-    private const int MouseArmPollMs = 30;
+    private const int PageStep = 8;
+
+    private enum Action { TemplateHeader, Back, Cancel }
 
     private readonly Vault _vault;
     /// <summary>Clip plus whether to paste it (false when Shift was held while choosing).</summary>
-    private readonly Action<Clip, bool> _onClipChosen;
-    private readonly Action<Template> _onTemplateChosen;
-    private readonly Window _anchor;
-    private readonly ContextMenu _menu;
+    private readonly System.Action<Clip, bool> _onClipChosen;
+    private readonly System.Action<Template> _onTemplateChosen;
+    private readonly PopupWindow _window;
+    private readonly PopupInputHooks _hooks;
     private readonly Dictionary<Guid, BitmapSource> _thumbnails = new();
-    private readonly System.Windows.Threading.DispatcherTimer _mouseArmTimer;
 
-    private NativeMethods.POINT _mouseAtOpen;
     private IntPtr _previousWindow;
-    private MenuItem? _cancelItem;
-    private Clip? _chosenClip;
-    private bool _insertChosen;
-    private Template? _chosenTemplate;
+    private bool _templatesMode;
 
-    public HistoryPopup(Vault vault, Action<Clip, bool> onClipChosen, Action<Template> onTemplateChosen)
+    public HistoryPopup(Vault vault, System.Action<Clip, bool> onClipChosen, System.Action<Template> onTemplateChosen)
     {
         _vault = vault;
         _onClipChosen = onClipChosen;
         _onTemplateChosen = onTemplateChosen;
 
-        _anchor = new Window
-        {
-            Width = 1,
-            Height = 1,
-            WindowStyle = WindowStyle.None,
-            ResizeMode = ResizeMode.NoResize,
-            AllowsTransparency = true,
-            Background = Brushes.Transparent,
-            ShowInTaskbar = false,
-            Topmost = true,
-            ShowActivated = true,
-            Content = new Grid(),
-        };
+        _window = new PopupWindow();
+        _window.RowClicked += Activate;
 
-        _menu = new ContextMenu
-        {
-            Placement = PlacementMode.Relative,
-            StaysOpen = false,
-        };
-        _menu.Closed += OnMenuClosed;
-        _menu.PreviewKeyDown += OnMenuKeyDown;
-
-        _mouseArmTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(MouseArmPollMs) };
-        _mouseArmTimer.Tick += (_, _) =>
-        {
-            NativeMethods.GetCursorPos(out var now);
-            if (Math.Abs(now.X - _mouseAtOpen.X) >= MouseArmDistancePx || Math.Abs(now.Y - _mouseAtOpen.Y) >= MouseArmDistancePx)
-                ArmMouse();
-        };
+        _hooks = new PopupInputHooks(_window.Dispatcher);
+        _hooks.KeyDown += OnKey;
+        _hooks.ClickedOutside += Close;
+        _hooks.ForegroundChanged += Close;
     }
 
-    /// <summary>
-    /// The popup often opens under the pointer, and WPF menus highlight whatever the mouse is over,
-    /// which would override the initial selection. So the menu ignores the mouse until it actually moves.
-    /// </summary>
-    private void DisarmMouseUntilMoved()
-    {
-        NativeMethods.GetCursorPos(out _mouseAtOpen);
-        _menu.IsHitTestVisible = false;
-        _mouseArmTimer.Start();
-    }
-
-    private void ArmMouse()
-    {
-        _mouseArmTimer.Stop();
-        _menu.IsHitTestVisible = true;
-    }
-
-    public bool IsOpen => _menu.IsOpen;
+    public bool IsOpen => _hooks.Installed;
 
     public void Toggle()
     {
-        if (IsOpen) _menu.IsOpen = false;
+        if (IsOpen) Close();
         else Open();
     }
 
     private void Open()
     {
+        InputSender.MaskHeldModifiers();   // first thing: the hotkey's Alt/Win must not read as a lone tap to the app underneath
         _previousWindow = WindowFocus.Current();
-        _chosenClip = null;
-        _chosenTemplate = null;
+        _templatesMode = false;
         Trace.Log($"popup open: previous {Trace.Window(_previousWindow)}");
 
         var pt = WindowFocus.CaretOrCursor(_previousWindow);
-        _anchor.Show();
-        var hwnd = new WindowInteropHelper(_anchor).Handle;
-        NativeMethods.SetWindowPos(hwnd, NativeMethods.HWND_TOPMOST, pt.X, pt.Y, 0, 0,
-            NativeMethods.SWP_NOSIZE | NativeMethods.SWP_SHOWWINDOW);
-        WindowFocus.Bring(hwnd);
-        Trace.Log($"popup open: anchor shown at {pt.X},{pt.Y}; foreground now {Trace.Foreground()}");
-
-        Populate();
-        _menu.PlacementTarget = (UIElement)_anchor.Content;
-        DisarmMouseUntilMoved();
-        _menu.IsOpen = true;
-        FocusInitialItem();
-        Trace.Log($"popup open: menu open, foreground {Trace.Foreground()}");
+        ShowMain(0);
+        _window.ShowAt(pt);
+        _hooks.Install(_window.ScreenRect);
+        Trace.Log($"popup open: shown at {pt.X},{pt.Y}; foreground still {Trace.Foreground()}");
     }
 
-    private void Populate()
+    private void Close()
     {
-        _menu.Items.Clear();
-        var clips = _vault.History.Items;
-        if (clips.Count == 0)
-        {
-            _menu.Items.Add(EmptyItem());
-        }
-        for (var i = 0; i < clips.Count; i++)
-        {
-            _menu.Items.Add(BuildClipItem(clips[i], i + 1));
-        }
-
-        _menu.Items.Add(new Separator());
-        _menu.Items.Add(BuildTemplateItem());
-        _menu.Items.Add(new Separator());
-        _cancelItem = new MenuItem { Header = "Cancel" };
-        _cancelItem.Click += (_, _) => _menu.IsOpen = false;
-        _menu.Items.Add(_cancelItem);
+        if (!IsOpen) return;
+        _hooks.Uninstall();
+        _window.Hide();
+        Trace.Log($"popup closed: foreground {Trace.Foreground()}");
     }
 
-    private static MenuItem EmptyItem() => new() { Header = "(no clips yet)", IsEnabled = false };
+    // ---- rows ----
+
+    private void ShowMain(int selectedIndex)
+    {
+        _templatesMode = false;
+        var rows = new List<Row>();
+        var clips = _vault.History.Items;
+        if (clips.Count == 0) rows.Add(Info("(no clips yet)"));
+        for (var i = 0; i < clips.Count; i++) rows.Add(ClipRow(clips[i], i + 1));
+        rows.Add(Separator());
+        rows.Add(new Row
+        {
+            Content = new TextBlock { Text = "Template  ▸" },
+            Tag = Action.TemplateHeader,
+            Selectable = _vault.Settings.Templates.Count > 0,
+        });
+        rows.Add(Separator());
+        rows.Add(new Row { Content = new TextBlock { Text = "Cancel" }, Tag = Action.Cancel });
+        _window.SetRows(rows, selectedIndex);
+        if (_window.SelectedRow is null) _window.SelectFirst();
+    }
+
+    private void ShowTemplates()
+    {
+        _templatesMode = true;
+        var rows = new List<Row>();
+        foreach (var t in _vault.Settings.Templates)
+        {
+            var content = new TextBlock();
+            content.Inlines.Add(new Run(t.Name));
+            if (t.Hotkey is { IsEmpty: false } hk)
+                content.Inlines.Add(new Run("    " + hk) { Foreground = Brushes.Gray });
+            rows.Add(new Row
+            {
+                Content = content,
+                Tag = t,
+                FontSize = RowFontSize,
+                ToolTip = TextTooltip(t.Text),
+            });
+        }
+        rows.Add(Separator());
+        rows.Add(new Row { Content = new TextBlock { Text = "◂  Back" }, Tag = Action.Back });
+        _window.SetRows(rows, 0);
+    }
+
+    private static Row Separator() => new()
+    {
+        Content = new System.Windows.Shapes.Rectangle { Height = 1, Fill = new SolidColorBrush(Color.FromRgb(0xD7, 0xD7, 0xD7)) },
+        Selectable = false,
+        IsSeparator = true,
+    };
+
+    private static Row Info(string text) => new() { Content = new TextBlock { Text = text }, Selectable = false };
+
+    private static TextBlock TextTooltip(string text) => new()
+    {
+        Text = Preview.Tooltip(text),
+        MaxWidth = 600,
+        TextWrapping = TextWrapping.Wrap,
+    };
 
     private string NumberPrefix(int number) => _vault.Settings.ShowNumbers ? $"{number:00}. " : "";
 
-    /// <summary>Rewrites the bold number prefix of an existing row.</summary>
-    private void SetNumber(MenuItem item, int number)
+    private Row ClipRow(Clip clip, int number)
     {
         var prefix = NumberPrefix(number);
-        if (prefix.Length == 0) return;
-        switch (item.Header)
-        {
-            case TextBlock tb when tb.Inlines.FirstInline is Run run:
-                run.Text = prefix;
-                break;
-            case StackPanel sp when sp.Children[0] is TextBlock tb:
-                tb.Text = prefix;
-                break;
-        }
-    }
-
-    private MenuItem BuildClipItem(Clip clip, int number)
-    {
-        var item = new MenuItem { Tag = clip, FontSize = RowFontSize };
-        if (clip.Id == _vault.History.LastChosenId) item.FontWeight = FontWeights.Bold;
-        var prefix = NumberPrefix(number);
+        object content;
+        object? tooltip = null;
 
         if (clip.Kind == ClipKind.Text)
         {
-            var header = new TextBlock();
-            if (prefix.Length > 0) header.Inlines.Add(new Run(prefix) { FontWeight = FontWeights.Bold });
-            header.Inlines.Add(new Run(Preview.Row(clip.Text!)));
-            item.Header = header;
-            if (_vault.Settings.ShowTextHints && Preview.RowIsTruncated(clip.Text!))
-            {
-                item.ToolTip = new TextBlock
-                {
-                    Text = Preview.Tooltip(clip.Text!),
-                    MaxWidth = 600,
-                    TextWrapping = TextWrapping.Wrap,
-                };
-            }
+            var tb = new TextBlock();
+            if (prefix.Length > 0) tb.Inlines.Add(new Run(prefix) { FontWeight = FontWeights.Bold });
+            tb.Inlines.Add(new Run(Preview.Row(clip.Text!)));
+            content = tb;
+            if (_vault.Settings.ShowTextHints && Preview.RowIsTruncated(clip.Text!)) tooltip = TextTooltip(clip.Text!);
         }
         else
         {
@@ -201,10 +170,10 @@ internal sealed class HistoryPopup
                 Stretch = Stretch.Uniform,
             });
             panel.Children.Add(new TextBlock { Text = "(BITMAP)", VerticalAlignment = VerticalAlignment.Center });
-            item.Header = panel;
+            content = panel;
             if (_vault.Settings.ShowImageHints)
             {
-                item.ToolTip = new Image
+                tooltip = new Image
                 {
                     Source = ImageCodec.Load(_vault.Storage.ImagePath(clip)),
                     MaxWidth = TooltipImageMax,
@@ -213,17 +182,15 @@ internal sealed class HistoryPopup
                 };
             }
         }
-        ToolTipService.SetInitialShowDelay(item, 700);
-        item.Click += (_, _) => ChooseClip(clip);
-        return item;
-    }
 
-    /// <summary>Shift held while choosing means "copy only, do not paste".</summary>
-    private void ChooseClip(Clip clip)
-    {
-        _chosenClip = clip;
-        _insertChosen = !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-        _menu.IsOpen = false;
+        return new Row
+        {
+            Content = content,
+            Tag = clip,
+            ToolTip = tooltip,
+            FontSize = RowFontSize,
+            FontWeight = clip.Id == _vault.History.LastChosenId ? FontWeights.Bold : FontWeights.Normal,
+        };
     }
 
     private BitmapSource Thumbnail(Clip clip)
@@ -237,103 +204,93 @@ internal sealed class HistoryPopup
         return thumb;
     }
 
-    private MenuItem BuildTemplateItem()
+    // ---- input ----
+
+    private static bool ShiftHeld() => (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+
+    private bool IsPopupHotkey(int vk)
     {
-        var templates = _vault.Settings.Templates;
-        var item = new MenuItem { Header = "Template", IsEnabled = templates.Count > 0 };
-        foreach (var t in templates)
+        var hk = _vault.Settings.PopupHotkey;
+        if (vk != hk.VirtualKey) return false;
+        static bool Down(int key) => (GetAsyncKeyState(key) & 0x8000) != 0;
+        var mods = HotkeyModifiers.None;
+        if (Down(VK_CONTROL)) mods |= HotkeyModifiers.Control;
+        if (Down(VK_MENU)) mods |= HotkeyModifiers.Alt;
+        if (Down(VK_SHIFT)) mods |= HotkeyModifiers.Shift;
+        if (Down(VK_LWIN) || Down(VK_RWIN)) mods |= HotkeyModifiers.Win;
+        return mods == hk.Modifiers;
+    }
+
+    private void OnKey(int vk)
+    {
+        if (!IsOpen) return;
+        switch (vk)
         {
-            var sub = new MenuItem
-            {
-                Header = new TextBlock { Text = t.Name },
-                InputGestureText = t.Hotkey?.ToString(),
-                ToolTip = new TextBlock { Text = Preview.Tooltip(t.Text), MaxWidth = 600, TextWrapping = TextWrapping.Wrap },
-            };
-            sub.Click += (_, _) => { _chosenTemplate = t; _menu.IsOpen = false; };
-            item.Items.Add(sub);
+            case 0x1B: Close(); return;                                   // Esc
+            case 0x26: _window.MoveSelection(-1); return;                 // Up
+            case 0x28: _window.MoveSelection(+1); return;                 // Down
+            case 0x21: _window.MoveSelection(-PageStep); return;          // PageUp
+            case 0x22: _window.MoveSelection(+PageStep); return;          // PageDown
+            case 0x24: _window.SelectFirst(); return;                     // Home
+            case 0x23: _window.SelectLast(); return;                      // End
+            case 0x0D: case 0x20:                                         // Enter, Space
+                if (_window.SelectedRow is { } row) Activate(row);
+                return;
+            case 0x27:                                                    // Right: into templates
+                if (!_templatesMode && _window.SelectedRow?.Tag is Action.TemplateHeader) ShowTemplates();
+                return;
+            case 0x25: case 0x08:                                         // Left, Backspace: back to clips
+                if (_templatesMode) ShowMain(0);
+                return;
+            case 0x2E:                                                    // Delete
+                if (!_templatesMode && _window.SelectedRow?.Tag is Clip victim) DeleteClip(victim);
+                return;
         }
-        return item;
-    }
 
-    private void FocusInitialItem()
-    {
-        var target = ClipItems().FirstOrDefault();
-        if (target is null) return;
-        _menu.Dispatcher.BeginInvoke(() => target.Focus(), System.Windows.Threading.DispatcherPriority.Input);
-    }
-
-    private IEnumerable<MenuItem> ClipItems() => _menu.Items.OfType<MenuItem>().Where(m => m.Tag is Clip);
-
-    private void OnMenuKeyDown(object sender, KeyEventArgs e)
-    {
-        var digit = e.Key switch
+        var digit = vk switch
         {
-            >= Key.D1 and <= Key.D9 => e.Key - Key.D0,
-            >= Key.NumPad1 and <= Key.NumPad9 => e.Key - Key.NumPad0,
+            >= 0x31 and <= 0x39 => vk - 0x30,
+            >= 0x61 and <= 0x69 => vk - 0x60,
             _ => 0,
         };
-        if (digit > 0 && (Keyboard.Modifiers & ~ModifierKeys.Shift) == ModifierKeys.None)
+        if (digit > 0 && !_templatesMode)
         {
-            var item = ClipItems().ElementAtOrDefault(digit - 1);
-            if (item is not null) ChooseClip((Clip)item.Tag);
-            e.Handled = true;
+            var clips = _vault.History.Items;
+            if (digit <= clips.Count) ChooseClip(clips[digit - 1]);
             return;
         }
 
-        if (e.Key == Key.Delete)
+        if (IsPopupHotkey(vk)) Close();
+        // every other key is swallowed by the hook and ignored here, like a menu would
+    }
+
+    private void Activate(Row row)
+    {
+        switch (row.Tag)
         {
-            DeleteHighlightedRow();
-            e.Handled = true;
+            case Clip clip: ChooseClip(clip); break;
+            case Template template:
+                Close();
+                _onTemplateChosen(template);
+                break;
+            case Action.TemplateHeader: ShowTemplates(); break;
+            case Action.Back: ShowMain(0); break;
+            case Action.Cancel: Close(); break;
         }
     }
 
-    /// <summary>
-    /// Removes the highlighted clip without rebuilding the menu: rebuilding would drop the focused row,
-    /// the menu would lose keyboard focus, and WPF would close it.
-    /// </summary>
-    private void DeleteHighlightedRow()
+    /// <summary>Shift held while choosing means "copy only, do not paste".</summary>
+    private void ChooseClip(Clip clip)
     {
-        var items = ClipItems().ToList();
-        var index = items.FindIndex(m => m.IsHighlighted || m.IsKeyboardFocusWithin);
-        if (index < 0) return;
-
-        var victim = items[index];
-        var next = items.ElementAtOrDefault(index + 1) ?? items.ElementAtOrDefault(index - 1);
-        (next ?? _cancelItem)?.Focus();   // keep focus inside the menu before the row disappears
-
-        _menu.Items.Remove(victim);
-        _vault.History.Remove(((Clip)victim.Tag).Id);
-
-        var remaining = ClipItems().ToList();
-        if (remaining.Count == 0)
-        {
-            _menu.Items.Insert(0, EmptyItem());
-            return;
-        }
-        for (var i = 0; i < remaining.Count; i++) SetNumber(remaining[i], i + 1);
+        var insert = !ShiftHeld();
+        Close();
+        _onClipChosen(clip, insert);
     }
 
-    private void OnMenuClosed(object sender, RoutedEventArgs e)
+    private void DeleteClip(Clip clip)
     {
-        ArmMouse();
-        Trace.Log($"popup closed: chosen={(_chosenClip is not null ? _chosenClip.Kind.ToString() : _chosenTemplate is not null ? "template" : "nothing")}, foreground {Trace.Foreground()}");
-        _anchor.Hide();
-        Trace.Log($"popup closed: anchor hidden, foreground {Trace.Foreground()}");
-        WindowFocus.Bring(_previousWindow);
-        Trace.Log($"popup closed: after restore, foreground {Trace.Foreground()}");
-        if (Trace.Enabled)
-        {
-            var later = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-            later.Tick += (_, _) => { later.Stop(); Trace.Log($"popup closed +250ms: foreground {Trace.Foreground()}"); };
-            later.Start();
-        }
-
-        var clip = _chosenClip;
-        var insert = _insertChosen;
-        var template = _chosenTemplate;
-        _chosenClip = null;
-        _chosenTemplate = null;
-        if (clip is not null) _onClipChosen(clip, insert);
-        else if (template is not null) _onTemplateChosen(template);
+        var index = _vault.History.Items.ToList().FindIndex(c => c.Id == clip.Id);
+        _vault.History.Remove(clip.Id);
+        ShowMain(Math.Min(index, Math.Max(0, _vault.History.Items.Count - 1)));
     }
 }
