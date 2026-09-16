@@ -21,6 +21,8 @@ internal sealed class HistoryPopup
     private const int ThumbnailHeight = 32;
     private const int TooltipImageMax = 400;
     private const double RowFontSize = 13.5;   // default menu font is 12
+    private const int MouseArmDistancePx = 3;
+    private const int MouseArmPollMs = 30;
 
     private readonly Vault _vault;
     private readonly Action<Clip> _onClipChosen;
@@ -28,7 +30,9 @@ internal sealed class HistoryPopup
     private readonly Window _anchor;
     private readonly ContextMenu _menu;
     private readonly Dictionary<Guid, BitmapSource> _thumbnails = new();
+    private readonly System.Windows.Threading.DispatcherTimer _mouseArmTimer;
 
+    private NativeMethods.POINT _mouseAtOpen;
     private IntPtr _previousWindow;
     private MenuItem? _cancelItem;
     private Clip? _chosenClip;
@@ -61,6 +65,31 @@ internal sealed class HistoryPopup
         };
         _menu.Closed += OnMenuClosed;
         _menu.PreviewKeyDown += OnMenuKeyDown;
+
+        _mouseArmTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(MouseArmPollMs) };
+        _mouseArmTimer.Tick += (_, _) =>
+        {
+            NativeMethods.GetCursorPos(out var now);
+            if (Math.Abs(now.X - _mouseAtOpen.X) >= MouseArmDistancePx || Math.Abs(now.Y - _mouseAtOpen.Y) >= MouseArmDistancePx)
+                ArmMouse();
+        };
+    }
+
+    /// <summary>
+    /// The popup often opens under the pointer, and WPF menus highlight whatever the mouse is over,
+    /// which would override the initial selection. So the menu ignores the mouse until it actually moves.
+    /// </summary>
+    private void DisarmMouseUntilMoved()
+    {
+        NativeMethods.GetCursorPos(out _mouseAtOpen);
+        _menu.IsHitTestVisible = false;
+        _mouseArmTimer.Start();
+    }
+
+    private void ArmMouse()
+    {
+        _mouseArmTimer.Stop();
+        _menu.IsHitTestVisible = true;
     }
 
     public bool IsOpen => _menu.IsOpen;
@@ -88,6 +117,7 @@ internal sealed class HistoryPopup
 
         Populate();
         _menu.PlacementTarget = (UIElement)_anchor.Content;
+        DisarmMouseUntilMoved();
         _menu.IsOpen = true;
         FocusInitialItem();
         Trace.Log($"popup open: menu open, foreground {Trace.Foreground()}");
@@ -279,6 +309,7 @@ internal sealed class HistoryPopup
 
     private void OnMenuClosed(object sender, RoutedEventArgs e)
     {
+        ArmMouse();
         Trace.Log($"popup closed: chosen={(_chosenClip is not null ? _chosenClip.Kind.ToString() : _chosenTemplate is not null ? "template" : "nothing")}, foreground {Trace.Foreground()}");
         _anchor.Hide();
         Trace.Log($"popup closed: anchor hidden, foreground {Trace.Foreground()}");
