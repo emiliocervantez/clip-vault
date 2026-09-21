@@ -18,13 +18,13 @@ Option 1 from ADR 1. The popup is a plain WPF window with `WS_EX_NOACTIVATE | WS
 
 While the popup is open three hooks are installed and removed on close:
 
-- `WH_KEYBOARD_LL`: every non-modifier key press is forwarded to the popup (Up/Down/PageUp/PageDown/Home/End, Enter/Space, digits, Delete, Left/Right for the template submenu, Esc, the history hotkey to toggle) and swallowed, so the focused application sees none of it. Modifier keys pass through so the application's modifier state stays consistent. Handling is dispatched asynchronously; the hook callback itself returns immediately, well within Windows' low-level hook timeout.
+- `WH_KEYBOARD_LL`: every non-modifier key press is forwarded to the popup (Up/Down/PageUp/PageDown/Home/End, Enter/Space, digits, Delete, Esc, the history hotkey to toggle) and swallowed, so the focused application sees none of it. Modifier keys pass through so the application's modifier state stays consistent. Handling is dispatched asynchronously; the hook callback itself returns immediately, well within Windows' low-level hook timeout.
 - `WH_MOUSE_LL`: a button press outside the popup rectangle closes it (a non-activated window cannot use mouse capture for this).
 - `EVENT_SYSTEM_FOREGROUND` win-event: a foreground change (Alt+Tab, clicking another app) closes it.
 
 Mouse hover and clicks inside the popup work natively; non-activated windows still receive mouse messages, and Windows 10+ routes the wheel to the window under the pointer.
 
-The template submenu is rendered in place (the list switches to the templates with a "Back" row) instead of a fly-out, because a second non-activated window adds nothing the user needs.
+Templates are not listed in the popup; they are reached through their hotkeys only.
 
 ### Lone-modifier masking
 

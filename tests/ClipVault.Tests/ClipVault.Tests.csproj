@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
+    <!-- Lets the tests run on a machine that has only a newer .NET runtime (e.g. .NET 9 SDK without .NET 8). -->
+    <RollForward>Major</RollForward>
   </PropertyGroup>
 
   <ItemGroup>

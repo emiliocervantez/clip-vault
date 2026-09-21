@@ -15,7 +15,7 @@ ClipVault is a Windows clipboard-history tool. It watches the clipboard, keeps w
 | **Last Chosen Clip** | The Clip most recently chosen. Shown in bold in the Popup. At most one exists. The Popup always opens with the first (newest) row selected. |
 | **Insert** | Pasting the clipboard into the Previous Window by sending Ctrl+V. Happens after every Choose unless Shift was held while choosing (then the Clip is only copied to the clipboard); always happens for a Template. |
 | **Previous Window** | The application window that had focus when the Popup was opened. It keeps focus the whole time the Popup is open; the Popup never takes it. |
-| **Template** | A named, predefined piece of text with an optional hotkey. Pressing the hotkey or picking it from the Popup's Template submenu Inserts it and then restores what was on the clipboard before. Templates are never captured into the History. |
+| **Template** | A named, predefined piece of text with a hotkey. Pressing the hotkey Inserts it and then restores what was on the clipboard before. Templates do not appear in the Popup and are never captured into the History. |
 | **Hotkey** | A global key combination (modifiers plus a key) that works in every application. The history hotkey opens the Popup; a Template hotkey Inserts that Template. |
 | **Evict** | Dropping the oldest Clip when the History exceeds its cap, or all Clips beyond a newly lowered cap. |
 | **Duplicate** | A Capture whose content already exists in the History. The existing Clip moves to the top instead of a second Clip being added. |

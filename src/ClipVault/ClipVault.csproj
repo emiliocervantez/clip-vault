@@ -18,6 +18,8 @@
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- A framework-dependent exe (publish -Bundle false) may run on a newer .NET Desktop Runtime (9, 10, ...) when 8 is absent. -->
+    <RollForward>Major</RollForward>
     <Version>1.0.0</Version>
   </PropertyGroup>
 

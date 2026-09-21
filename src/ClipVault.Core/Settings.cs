@@ -4,7 +4,7 @@ public sealed class Template
 {
     public string Name { get; set; } = "";
     public string Text { get; set; } = "";
-    /// <summary>Optional. A template without a hotkey is reachable only from the popup submenu.</summary>
+    /// <summary>The only way to insert a template. A template without a hotkey is kept but cannot be triggered.</summary>
     public Hotkey? Hotkey { get; set; }
 
     public Template Clone() => new()

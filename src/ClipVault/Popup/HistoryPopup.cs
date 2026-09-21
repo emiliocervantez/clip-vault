@@ -21,24 +21,19 @@ internal sealed class HistoryPopup
     private const int TooltipImageMax = 400;
     private const int PageStep = 8;
 
-    private enum Action { TemplateHeader, Back, Cancel }
-
     private readonly Vault _vault;
     /// <summary>Clip plus whether to paste it (false when Shift was held while choosing).</summary>
     private readonly System.Action<Clip, bool> _onClipChosen;
-    private readonly System.Action<Template> _onTemplateChosen;
     private readonly PopupWindow _window;
     private readonly PopupInputHooks _hooks;
     private readonly Dictionary<Guid, BitmapSource> _thumbnails = new();
 
     private IntPtr _previousWindow;
-    private bool _templatesMode;
 
-    public HistoryPopup(Vault vault, System.Action<Clip, bool> onClipChosen, System.Action<Template> onTemplateChosen)
+    public HistoryPopup(Vault vault, System.Action<Clip, bool> onClipChosen)
     {
         _vault = vault;
         _onClipChosen = onClipChosen;
-        _onTemplateChosen = onTemplateChosen;
 
         _window = new PopupWindow();
         _window.RowClicked += Activate;
@@ -61,7 +56,6 @@ internal sealed class HistoryPopup
     {
         InputSender.MaskHeldModifiers();   // first thing: the hotkey's Alt/Win must not read as a lone tap to the app underneath
         _previousWindow = WindowFocus.Current();
-        _templatesMode = false;
         Trace.Log($"popup open: previous {Trace.Window(_previousWindow)}");
 
         var pt = WindowFocus.CaretOrCursor(_previousWindow);
@@ -83,53 +77,13 @@ internal sealed class HistoryPopup
 
     private void ShowMain(int selectedIndex)
     {
-        _templatesMode = false;
         var rows = new List<Row>();
         var clips = _vault.History.Items;
         if (clips.Count == 0) rows.Add(Info("(no clips yet)"));
         for (var i = 0; i < clips.Count; i++) rows.Add(ClipRow(clips[i], i + 1));
-        rows.Add(Separator());
-        rows.Add(new Row
-        {
-            Content = new TextBlock { Text = "Template  ▸" },
-            Tag = Action.TemplateHeader,
-            Selectable = _vault.Settings.Templates.Count > 0,
-        });
-        rows.Add(Separator());
-        rows.Add(new Row { Content = new TextBlock { Text = "Cancel" }, Tag = Action.Cancel });
         _window.SetRows(rows, selectedIndex);
         if (_window.SelectedRow is null) _window.SelectFirst();
     }
-
-    private void ShowTemplates()
-    {
-        _templatesMode = true;
-        var rows = new List<Row>();
-        foreach (var t in _vault.Settings.Templates)
-        {
-            var content = new TextBlock();
-            content.Inlines.Add(new Run(t.Name));
-            if (t.Hotkey is { IsEmpty: false } hk)
-                content.Inlines.Add(new Run("    " + hk) { Foreground = Brushes.Gray });
-            rows.Add(new Row
-            {
-                Content = content,
-                Tag = t,
-                FontSize = _vault.Settings.FontSize,
-                ToolTip = TextTooltip(t.Text),
-            });
-        }
-        rows.Add(Separator());
-        rows.Add(new Row { Content = new TextBlock { Text = "◂  Back" }, Tag = Action.Back });
-        _window.SetRows(rows, 0);
-    }
-
-    private static Row Separator() => new()
-    {
-        Content = new System.Windows.Shapes.Rectangle { Height = 1, Fill = new SolidColorBrush(Color.FromRgb(0xD7, 0xD7, 0xD7)) },
-        Selectable = false,
-        IsSeparator = true,
-    };
 
     private static Row Info(string text) => new() { Content = new TextBlock { Text = text }, Selectable = false };
 
@@ -235,14 +189,8 @@ internal sealed class HistoryPopup
             case 0x0D: case 0x20:                                         // Enter, Space
                 if (_window.SelectedRow is { } row) Activate(row);
                 return;
-            case 0x27:                                                    // Right: into templates
-                if (!_templatesMode && _window.SelectedRow?.Tag is Action.TemplateHeader) ShowTemplates();
-                return;
-            case 0x25: case 0x08:                                         // Left, Backspace: back to clips
-                if (_templatesMode) ShowMain(0);
-                return;
             case 0x2E:                                                    // Delete
-                if (!_templatesMode && _window.SelectedRow?.Tag is Clip victim) DeleteClip(victim);
+                if (_window.SelectedRow?.Tag is Clip victim) DeleteClip(victim);
                 return;
         }
 
@@ -252,7 +200,7 @@ internal sealed class HistoryPopup
             >= 0x61 and <= 0x69 => vk - 0x60,
             _ => 0,
         };
-        if (digit > 0 && !_templatesMode)
+        if (digit > 0)
         {
             var clips = _vault.History.Items;
             if (digit <= clips.Count) ChooseClip(clips[digit - 1]);
@@ -265,17 +213,7 @@ internal sealed class HistoryPopup
 
     private void Activate(Row row)
     {
-        switch (row.Tag)
-        {
-            case Clip clip: ChooseClip(clip); break;
-            case Template template:
-                Close();
-                _onTemplateChosen(template);
-                break;
-            case Action.TemplateHeader: ShowTemplates(); break;
-            case Action.Back: ShowMain(0); break;
-            case Action.Cancel: Close(); break;
-        }
+        if (row.Tag is Clip clip) ChooseClip(clip);
     }
 
     /// <summary>Shift held while choosing means "copy only, do not paste".</summary>

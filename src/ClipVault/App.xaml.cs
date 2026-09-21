@@ -46,7 +46,7 @@ public partial class App : Application
         ClipboardIO.Owner = _messages.Handle;
         _messages.ClipboardUpdated += _vault.CaptureFromClipboard;
         _hotkeys = new HotkeyManager(_messages);
-        _popup = new HistoryPopup(_vault, OnClipChosen, OnTemplateChosen);
+        _popup = new HistoryPopup(_vault, OnClipChosen);
         _tray = new TrayIcon(
             showHistory: () => _popup.Toggle(),
             showSettings: ShowSettings,
@@ -130,8 +130,6 @@ public partial class App : Application
         Trace.Log($"insert: sending Ctrl+V to {Trace.Foreground()}");
         InputSender.SendCtrlV();
     }
-
-    private void OnTemplateChosen(Template template) => InsertTemplate(template);
 
     private async void InsertTemplate(Template template)
     {

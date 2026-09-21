@@ -10,13 +10,14 @@ Clipboard history for Windows 10 and 11. Runs in the tray, remembers what you co
 - A chosen clip is pasted into the previous window. Hold `Shift` while choosing to only copy it to the clipboard.
 - The last chosen clip is shown in bold; the popup opens with the newest clip selected.
 - The popup never takes focus, so the app you are working in keeps focus and any popup it has open stays open.
-- Templates: predefined text with optional hotkeys, also reachable from the popup's Template submenu.
+- Templates: predefined text, each inserted by its own hotkey.
 - Settings: number of stored items, move chosen item to top, start with Windows, hints, numbering, hotkeys, templates.
 - Content that password managers mark as private is never stored.
 
 ## Build
 
-Requires the .NET 8 SDK.
+Requires the .NET 8 SDK or newer. A newer SDK (9, 10, ...) builds and publishes the .NET 8 targets as is;
+the app and the tests roll forward to the newer runtime when .NET 8 is not installed.
 
 ```
 .\build.cmd            # Debug build + tests
@@ -24,19 +25,22 @@ Requires the .NET 8 SDK.
 .\build.cmd -NoTest    # skip tests
 ```
 
-## Publish (self-contained, single exe)
+## Publish (single exe)
 
 ```
-.\publish.cmd                  # -> publish\ClipVault.exe
-.\publish.cmd -Output C:\tmp   # custom folder
-.\publish.cmd -StopRunning     # first stop a ClipVault started from the output folder
+.\publish.cmd                     # -> publish\ClipVault.exe with .NET bundled (about 140 MB)
+.\publish.cmd -Bundle false      # small exe; target machine needs the .NET 8 Desktop Runtime
+.\publish.cmd -Output C:\tmp      # custom folder
+.\publish.cmd -StopRunning        # first stop a ClipVault started from the output folder
 ```
 
 The `.cmd` files run the matching `.ps1` with `-ExecutionPolicy Bypass`, so they work even when running
 PowerShell scripts is disabled on the machine. If your policy allows scripts, `.\build.ps1` and `.\publish.ps1`
 take the same arguments.
 
-The result is a single `ClipVault.exe` for win-x64. No .NET runtime needs to be installed on the target machine.
+The result is a single `ClipVault.exe` for win-x64. With `--bundle=true` (the default) nothing needs to be
+installed on the target machine. With `--bundle=false` the exe is under 1 MB and requires the
+.NET 8 Desktop Runtime (x64) from https://dotnet.microsoft.com/download/dotnet/8.0.
 The script refuses to overwrite an exe that is currently running unless `-StopRunning` is given.
 
 ## Diagnostics

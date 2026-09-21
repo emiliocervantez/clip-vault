@@ -1,13 +1,26 @@
-# Publishes ClipVault as a self-contained single-file exe for win-x64.
-#   .\publish.ps1                 -> .\publish\ClipVault.exe
-#   .\publish.ps1 -Output C:\tmp  -> C:\tmp\ClipVault.exe
-#   .\publish.ps1 -StopRunning    stop a ClipVault started from the output folder first
+# Publishes ClipVault as a single-file exe for win-x64.
+#   .\publish.ps1                    -> .\publish\ClipVault.exe, .NET bundled (runs anywhere)
+#   .\publish.ps1 --bundle=false     -> small exe, needs the .NET 8 Desktop Runtime on the target machine
+#   .\publish.ps1 -Output C:\tmp     -> C:\tmp\ClipVault.exe
+#   .\publish.ps1 -StopRunning       stop a ClipVault started from the output folder first
 param(
-    [string]$Output = (Join-Path $PSScriptRoot 'publish'),
-    [switch]$StopRunning
+    [string]$Output = '',
+    [switch]$StopRunning,
+    [ValidateSet('true', 'false')][string]$Bundle = 'true',
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Rest
 )
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+# Not a parameter default: in Windows PowerShell 5.1, $PSScriptRoot is empty while defaults are evaluated
+# once the script carries a [Parameter()] attribute.
+if (-not $Output) { $Output = Join-Path $PSScriptRoot 'publish' }
+
+# Accept the --bundle=true|false spelling as well as -Bundle true|false.
+foreach ($arg in $Rest) {
+    if ($arg -match '^--bundle=(true|false)$') { $Bundle = $Matches[1] }
+    else { Write-Error "Unknown argument '$arg'. Use --bundle=true|false, -Output <dir>, -StopRunning." }
+}
+$selfContained = $Bundle -eq 'true'
 
 $target = Join-Path $Output 'ClipVault.exe'
 $running = Get-Process ClipVault -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $target }
@@ -20,10 +33,11 @@ if ($running) {
     }
 }
 
-dotnet publish src\ClipVault\ClipVault.csproj -c Release -r win-x64 --self-contained `
+dotnet publish src\ClipVault\ClipVault.csproj -c Release -r win-x64 --self-contained $selfContained.ToString().ToLower() `
     -p:PublishSingleFile=true -o $Output --nologo
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Remove-Item (Join-Path $Output '*.pdb') -ErrorAction SilentlyContinue
 $exe = Get-Item (Join-Path $Output 'ClipVault.exe')
-"Published $($exe.FullName) ($([math]::Round($exe.Length / 1MB, 1)) MB)"
+$mode = if ($selfContained) { '.NET bundled' } else { 'needs .NET 8 Desktop Runtime on the target' }
+"Published $($exe.FullName) ($([math]::Round($exe.Length / 1MB, 1)) MB, $mode)"
