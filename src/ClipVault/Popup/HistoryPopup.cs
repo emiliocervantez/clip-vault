@@ -40,6 +40,7 @@ internal sealed class HistoryPopup
 
         _hooks = new PopupInputHooks(_window.Dispatcher);
         _hooks.KeyDown += OnKey;
+        _hooks.SwitchChord += Close;      // Alt+Tab and friends: close immediately, Windows handles the chord
         _hooks.ClickedOutside += Close;
         _hooks.ForegroundChanged += Close;
     }

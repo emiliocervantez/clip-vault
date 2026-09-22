@@ -35,6 +35,8 @@ internal sealed class PopupInputHooks : IDisposable
 
     /// <summary>Virtual-key code of a pressed non-modifier key. Return value ignored; the key is always swallowed.</summary>
     public event Action<int>? KeyDown;
+    /// <summary>A window-switching chord (Alt+Tab, Alt+Esc, Win+Tab) was pressed; it was passed through, not swallowed.</summary>
+    public event Action? SwitchChord;
     public event Action? ClickedOutside;
     public event Action? ForegroundChanged;
 
@@ -63,6 +65,12 @@ internal sealed class PopupInputHooks : IDisposable
     private static bool IsModifier(int vk) => vk is VK_SHIFT or VK_CONTROL or VK_MENU or VK_LWIN or VK_RWIN
         or 0xA0 or 0xA1 or 0xA2 or 0xA3 or 0xA4 or 0xA5;   // L/R Shift, Ctrl, Alt
 
+    private static bool Held(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;
+
+    /// <summary>Alt+Tab, Alt+Shift+Tab, Alt+Esc, Win+Tab: Windows must see these, so they are never swallowed.</summary>
+    private static bool IsSwitchChord(int vk) =>
+        vk is VK_TAB or VK_ESCAPE && (Held(VK_MENU) || Held(VK_LWIN) || Held(VK_RWIN));
+
     private IntPtr KeyboardCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode < 0) return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
@@ -70,6 +78,11 @@ internal sealed class PopupInputHooks : IDisposable
         if (IsModifier(vk)) return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
 
         var msg = wParam.ToInt32();
+        if (IsSwitchChord(vk))
+        {
+            if (msg is WM_KEYDOWN or WM_SYSKEYDOWN) _dispatcher.BeginInvoke(() => SwitchChord?.Invoke());
+            return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+        }
         if (msg is WM_KEYDOWN or WM_SYSKEYDOWN)
         {
             // Handle asynchronously: the hook must return within Windows' low-level hook timeout.

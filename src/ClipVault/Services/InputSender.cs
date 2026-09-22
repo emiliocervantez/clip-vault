@@ -7,7 +7,6 @@ namespace ClipVault.Services;
 internal static class InputSender
 {
     private const uint GUI_INMENUMODE = 0x0004;
-    private const int VK_ESCAPE = 0x1B;
     private const int MenuModeExitDelayMs = 30;
 
     private static bool Down(int vk) => (GetAsyncKeyState(vk) & 0x8000) != 0;

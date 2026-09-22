@@ -18,7 +18,7 @@ Option 1 from ADR 1. The popup is a plain WPF window with `WS_EX_NOACTIVATE | WS
 
 While the popup is open three hooks are installed and removed on close:
 
-- `WH_KEYBOARD_LL`: every non-modifier key press is forwarded to the popup (Up/Down/PageUp/PageDown/Home/End, Enter/Space, digits, Delete, Esc, the history hotkey to toggle) and swallowed, so the focused application sees none of it. Modifier keys pass through so the application's modifier state stays consistent. Handling is dispatched asynchronously; the hook callback itself returns immediately, well within Windows' low-level hook timeout.
+- `WH_KEYBOARD_LL`: every non-modifier key press is forwarded to the popup (Up/Down/PageUp/PageDown/Home/End, Enter/Space, digits, Delete, Esc, the history hotkey to toggle) and swallowed, so the focused application sees none of it. Modifier keys pass through so the application's modifier state stays consistent. Window-switching chords (Alt+Tab, Alt+Shift+Tab, Alt+Esc, Win+Tab) also pass through and close the popup, so the switcher works while the popup is open. Handling is dispatched asynchronously; the hook callback itself returns immediately, well within Windows' low-level hook timeout.
 - `WH_MOUSE_LL`: a button press outside the popup rectangle closes it (a non-activated window cannot use mouse capture for this).
 - `EVENT_SYSTEM_FOREGROUND` win-event: a foreground change (Alt+Tab, clicking another app) closes it.
 
