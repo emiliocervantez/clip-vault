@@ -14,6 +14,7 @@ public partial class App : Application
     private const string ShowSettingsEventName = @"Local\ClipVault.ShowSettings";
     private const int AutoInsertDelayMs = 60;
     private const int TemplateRestoreDelayMs = 300;
+    private static readonly TimeSpan KeepWarmInterval = TimeSpan.FromMinutes(1);
 
     private Mutex? _mutex;
     private MessageWindow? _messages;
@@ -55,6 +56,11 @@ public partial class App : Application
 
         var failures = RegisterHotkeys(_vault.Settings, _vault.Settings);
         if (failures.Count > 0) _tray.Notify("ClipVault hotkeys", string.Join("\n", failures));
+
+        Responsiveness.OptOutOfPowerThrottling();
+        var keepWarm = new System.Windows.Threading.DispatcherTimer { Interval = KeepWarmInterval };
+        keepWarm.Tick += (_, _) => _popup.KeepWarm();
+        keepWarm.Start();
     }
 
     private void ShowSettings()

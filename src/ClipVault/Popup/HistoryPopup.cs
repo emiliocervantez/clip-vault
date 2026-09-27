@@ -47,6 +47,18 @@ internal sealed class HistoryPopup
 
     public bool IsOpen => _hooks.Installed;
 
+    /// <summary>
+    /// Rebuilds and lays out the rows on the hidden window so the code and data behind the popup stay
+    /// resident while ClipVault idles. Windows trims untouched pages of background processes, and paging
+    /// them back in is what made the first open after a pause slow.
+    /// </summary>
+    public void KeepWarm()
+    {
+        if (IsOpen) return;
+        ShowMain(0);
+        _window.UpdateLayout();
+    }
+
     public void Toggle()
     {
         if (IsOpen) Close();
