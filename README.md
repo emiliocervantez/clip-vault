@@ -14,6 +14,10 @@ Clipboard history for Windows 10 and 11. Runs in the tray, remembers what you co
 - Settings: number of stored items, move chosen item to top, start with Windows, hints, numbering, hotkeys, templates.
 - Content that password managers mark as private is never stored.
 
+## Download
+
+Ready-made `ClipVault.exe` builds are attached to [GitHub Releases](https://github.com/emiliocervantez/clip-vault/releases).
+
 ## Build
 
 Requires the .NET 8 SDK or newer. A newer SDK (9, 10, ...) builds and publishes the .NET 8 targets as is;
@@ -42,6 +46,16 @@ The result is a single `ClipVault.exe` for win-x64. With `--bundle=true` (the de
 installed on the target machine. With `--bundle=false` the exe is under 1 MB and requires the
 .NET 8 Desktop Runtime (x64) from https://dotnet.microsoft.com/download/dotnet/8.0.
 The script refuses to overwrite an exe that is currently running unless `-StopRunning` is given.
+
+## Release
+
+Needs the [GitHub CLI](https://cli.github.com/), logged in (`gh auth login`). Commit and push first: the release is tagged on `master`.
+
+```
+.\scripts\release.cmd v1.1.0                 # tests, small exe, tag + GitHub Release with the exe
+.\scripts\release.cmd v1.1.0 -Bundle true    # same with the .NET bundled exe
+.\scripts\release.cmd v1.0.0 -Replace        # rebuild and replace the exe of an existing release
+```
 
 ## Diagnostics
 
